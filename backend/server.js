@@ -6,8 +6,8 @@ const YahooFinance = require("yahoo-finance2").default;
 
 const yahooFinance = new YahooFinance();
 
-const PORT = process.env.PORT || 5000;
 
+const PORT = process.env.PORT || 5000;
 
 const symbolMap = {
   "HDFC Bank": "HDFCBANK.NS",
