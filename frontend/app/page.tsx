@@ -1,59 +1,33 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import PortfolioTable from "./components/PortfolioTable";
+import PortfolioCharts from "./components/PortfolioCharts";
+
 import { fetchPortfolio } from "./services/api";
 import { Stock } from "./types/portfolio";
-import SectorGroup from "./components/SectorGroup";
-
-const sectorMap: Record<string, string> = {
-  "HDFC Bank": "Financial Sector",
-  "Bajaj Finance": "Financial Sector",
-  "ICICI Bank": "Financial Sector",
-  "Bajaj Housing": "Financial Sector",
-  "Savani Financials": "Financial Sector",
-  "SBI Life": "Financial Sector",
-
-  "Affle India": "Technology Sector",
-  "LTI Mindtree": "Technology Sector",
-  "KPIT Tech": "Technology Sector",
-  "Tata Tech": "Technology Sector",
-  "BLS E-Services": "Technology Sector",
-  "Tanla": "Technology Sector",
-  "Infy": "Technology Sector",
-  "Happiest Mind": "Technology Sector",
-  "Easemytrip": "Technology Sector",
-
-  "Dmart": "Consumer Sector",
-  "Tata Consumer": "Consumer Sector",
-  "Pidilite": "Consumer Sector",
-
-  "Tata Power": "Power Sector",
-  "KPI Green": "Power Sector",
-  "Suzlon": "Power Sector",
-  "Gensol": "Power Sector",
-
-  "Hariot Pipes": "Pipe Sector",
-  "Astral": "Pipe Sector",
-  "Polycab": "Pipe Sector",
-
-  "Clean Science": "Others",
-  "Deepak Nitrite": "Others",
-  "Fine Organic": "Others",
-  "Gravita": "Others",
-};
 
 export default function Home() {
   const [data, setData] = useState<Stock[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [lastUpdated, setLastUpdated] = useState("");
 
   const loadPortfolio = async () => {
     try {
-      setError("");
+    
       const res = await fetchPortfolio();
+
       setData(res);
+
+      setLastUpdated(
+        new Date().toLocaleTimeString()
+      );
+
+      setError("");
     } catch (err) {
       console.log(err);
+
       setError("Failed to load portfolio data");
     } finally {
       setLoading(false);
@@ -61,9 +35,8 @@ export default function Home() {
   };
 
   useEffect(() => {
-    (async () => {
-    await loadPortfolio();
-  })();
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    loadPortfolio();
 
     const interval = setInterval(() => {
       loadPortfolio();
@@ -72,35 +45,115 @@ export default function Home() {
     return () => clearInterval(interval);
   }, []);
 
-  // Group by sector
-  const groupedBySector = data.reduce((acc: Record<string, Stock[]>, stock) => {
-    const sector = sectorMap[stock.stockName] || "Unknown Sector";
+  const totalInvestment = data.reduce(
+    (sum, stock) => sum + stock.investment,
+    0
+  );
 
-    if (!acc[sector]) {
-      acc[sector] = [];
-    }
+  const totalPresentValue = data.reduce(
+    (sum, stock) => sum + stock.presentValue,
+    0
+  );
 
-    acc[sector].push(stock);
-    return acc;
-  }, {});
+  const totalGainLoss = data.reduce(
+    (sum, stock) => sum + stock.gainLoss,
+    0
+  );
 
   return (
-    <main className="p-6 max-w-7xl mx-auto bg-gray-50 min-h-screen">
-      <h1 className="text-2xl font-bold mb-6">📊 Portfolio Dashboard</h1>
+    <main className="min-h-screen bg-gray-100 p-6">
 
-      {loading && <p className="text-gray-500">Loading portfolio..fhhr.</p>}
+      <div className="max-w-7xl mx-auto">
 
-      {error && <p className="text-red-600 font-semibold">{error}</p>}
+        <div className="mb-8 text-center">
 
-      {!loading &&
-        !error &&
-        Object.keys(groupedBySector).map((sector) => (
-          <SectorGroup
-            key={sector}
-            sectorName={sector}
-            stocks={groupedBySector[sector]}
-          />
-        ))}
+          <h1 className="text-5xl font-bold text-black">
+            📊 Portfolio Dashboard
+          </h1>
+
+       
+
+          <p className="text-sm text-gray-400 mt-2">
+            Last Updated: {lastUpdated}
+          </p>
+
+        </div>
+
+        {/* Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+
+          {/* Investment */}
+          <div className="bg-linear-to-r from-blue-500 to-blue-700 text-white rounded-2xl shadow-lg p-6">
+
+            <p className="text-sm mb-2">
+              Total Investment
+            </p>
+
+            <h2 className="text-3xl font-bold">
+              ₹ {totalInvestment.toFixed(2)}
+            </h2>
+
+          </div>
+
+          {/* Present Value */}
+          <div className="bg-linear-to-r from-purple-500 to-purple-700 text-white rounded-2xl shadow-lg p-6">
+
+            <p className="text-sm mb-2">
+              Present Value
+            </p>
+
+            <h2 className="text-3xl font-bold">
+              ₹ {totalPresentValue.toFixed(2)}
+            </h2>
+
+          </div>
+
+          {/* Gain/Loss */}
+          <div
+            className={`text-white rounded-2xl shadow-lg p-6 ${
+              totalGainLoss >= 0
+                ? "bg-linear-to-r from-green-500 to-green-700"
+                : "bg-linear-to-r from-red-500 to-red-700"
+            }`}
+          >
+
+            <p className="text-sm mb-2">
+              Total Gain/Loss
+            </p>
+
+            <h2 className="text-3xl font-bold">
+              ₹ {totalGainLoss.toFixed(2)}
+            </h2>
+
+          </div>
+
+        </div>
+
+        {/* Charts */}
+        {!loading && !error && (
+          <PortfolioCharts data={data} />
+        )}
+
+        {/* Loading */}
+        {loading && (
+          <p className="text-center">
+            Loading...
+          </p>
+        )}
+
+        {/* Error */}
+        {error && (
+          <p className="text-center text-red-600">
+            {error}
+          </p>
+        )}
+
+        {/* Table */}
+        {!loading && !error && (
+          <PortfolioTable data={data} />
+        )}
+
+      </div>
     </main>
   );
 }
