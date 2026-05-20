@@ -6,6 +6,9 @@ const YahooFinance = require("yahoo-finance2").default;
 
 const yahooFinance = new YahooFinance();
 
+const PORT = process.env.PORT || 5000;
+
+
 const symbolMap = {
   "HDFC Bank": "HDFCBANK.NS",
   "Bajaj Finance": "BAJFINANCE.NS",
@@ -223,6 +226,6 @@ app.get("/", (req, res) => {
   res.send("Portfolio API Running");
 });
 
-app.listen(5000, () => {
-  console.log("Server running on port 5000");
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
 });
