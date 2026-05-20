@@ -66,8 +66,6 @@ const cache = {};
 
 const CACHE_TIME = 5 * 60 * 1000;
 
-const PORT = process.env.PORT || 5000;
-
 async function getStockData(symbol) {
   try {
     const now = Date.now();
@@ -83,6 +81,7 @@ async function getStockData(symbol) {
    
 
     const result = await yahooFinance.quote(symbol);
+    console.log(result);
 
     if (!result) {
       return {
@@ -109,7 +108,8 @@ async function getStockData(symbol) {
 
     return stockData;
   } catch (error) {
-    console.log("Yahoo Error:", error.message);
+    console.log("Yahoo Error for", symbol);
+console.log(error);
 
     return {
       cmp: 0,
@@ -223,6 +223,6 @@ app.get("/", (req, res) => {
   res.send("Portfolio API Running");
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+app.listen(5000, () => {
+  console.log("Server running on port 5000");
 });
