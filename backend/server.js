@@ -2,14 +2,12 @@ const express = require("express");
 const cors = require("cors");
 const XLSX = require("xlsx");
 
-const YahooFinance =
-  require("yahoo-finance2").default;
+const YahooFinance = require("yahoo-finance2").default;
 
-const yahooFinance =
-  new YahooFinance();
+const yahooFinance = new YahooFinance();
 
-const PORT =
-  process.env.PORT || 5000;
+
+const PORT = process.env.PORT || 5000;
 
 const symbolMap = {
   "HDFC Bank": "HDFCBANK.NS",
@@ -25,51 +23,43 @@ const symbolMap = {
   "BLS E-Services": "BLSE.NS",
   "Tanla": "TANLA.NS",
 
-  Dmart: "DMART.NS",
-  "Tata Consumer":
-    "TATACONSUM.NS",
-  Pidilite: "PIDILITIND.NS",
+  "Dmart": "DMART.NS",
+  "Tata Consumer": "TATACONSUM.NS",
+  "Pidilite": "PIDILITIND.NS",
 
   "Tata Power": "TATAPOWER.NS",
   "KPI Green": "KPIGREEN.NS",
-  Suzlon: "SUZLON.NS",
-  Gensol: "GENSOL.NS",
+  "Suzlon": "SUZLON.NS",
+  "Gensol": "GENSOL.NS",
 
-  "Hariot Pipes":
-    "HARIOMPIPE.NS",
-  Astral: "ASTRAL.NS",
-  Polycab: "POLYCAB.NS",
+  "Hariot Pipes": "HARIOMPIPE.NS",
+  "Astral": "ASTRAL.NS",
+  "Polycab": "POLYCAB.NS",
 
   "Clean Science": "CLEAN.NS",
-  "Deepak Nitrite":
-    "DEEPAKNTR.NS",
+  "Deepak Nitrite": "DEEPAKNTR.NS",
   "Fine Organic": "FINEORG.NS",
-  Gravita: "GRAVITA.NS",
+  "Gravita": "GRAVITA.NS",
   "SBI Life": "SBILIFE.NS",
 
-  Infy: "INFY.NS",
-  "Happiest Mind":
-    "HAPPSTMNDS.NS",
-  Easemytrip: "EASEMYTRIP.NS",
+  "Infy": "INFY.NS",
+  "Happiest Mind": "HAPPSTMNDS.NS",
+  "Easemytrip": "EASEMYTRIP.NS",
 };
 
 const app = express();
 
 app.use(cors());
 
-const workbook =
-  XLSX.readFile("portfolio.xlsx");
+const workbook = XLSX.readFile("portfolio.xlsx");
 
-const sheetName =
-  workbook.SheetNames[0];
+const sheetName = workbook.SheetNames[0];
 
-const sheet =
-  workbook.Sheets[sheetName];
+const sheet = workbook.Sheets[sheetName];
 
-const rawData =
-  XLSX.utils.sheet_to_json(sheet, {
-    range: 1,
-  });
+const rawData = XLSX.utils.sheet_to_json(sheet, {
+  range: 1,
+});
 
 const data = rawData.filter(
   (item) => item["Particulars"]
@@ -77,34 +67,24 @@ const data = rawData.filter(
 
 const cache = {};
 
-const CACHE_TIME =
-  60 * 60 * 1000;
-
-function delay(ms) {
-  return new Promise((resolve) =>
-    setTimeout(resolve, ms)
-  );
-}
+const CACHE_TIME = 5 * 60 * 1000;
 
 async function getStockData(symbol) {
   try {
     const now = Date.now();
 
+   
     if (
       cache[symbol] &&
-      now -
-        cache[symbol].timestamp <
-        CACHE_TIME
+      now - cache[symbol].timestamp < CACHE_TIME
     ) {
       return cache[symbol].data;
     }
 
-    await delay(1500);
+   
 
-    const result =
-      await yahooFinance.quote(
-        symbol
-      );
+    const result = await yahooFinance.quote(symbol);
+    console.log(result);
 
     if (!result) {
       return {
@@ -115,18 +95,15 @@ async function getStockData(symbol) {
     }
 
     const stockData = {
-      cmp:
-        result.regularMarketPrice ||
-        0,
+      cmp: result.regularMarketPrice || 0,
 
-      peRatio:
-        result.trailingPE || 0,
+      peRatio: result.trailingPE || 0,
 
       earnings:
-        result.epsTrailingTwelveMonths ||
-        0,
+        result.epsTrailingTwelveMonths || 0,
     };
 
+   
     cache[symbol] = {
       data: stockData,
       timestamp: now,
@@ -134,12 +111,8 @@ async function getStockData(symbol) {
 
     return stockData;
   } catch (error) {
-    console.log(
-      "Yahoo Error for",
-      symbol
-    );
-
-    console.log(error.message);
+    console.log("Yahoo Error for", symbol);
+console.log(error);
 
     return {
       cmp: 0,
@@ -149,52 +122,37 @@ async function getStockData(symbol) {
   }
 }
 
-app.get(
-  "/portfolio",
-  async (req, res) => {
-    try {
-      const totalInvestment =
-        data.reduce(
-          (sum, stock) => {
-            const qty =
-              stock["Qty"] || 0;
-
-            const purchasePrice =
-              stock[
-                "Purchase Price"
-              ] || 0;
-
-            return (
-              sum +
-              qty * purchasePrice
-            );
-          },
-          0
-        );
-
-      const updatedData = [];
-
-      for (const stock of data) {
-        const stockName =
-          stock["Particulars"];
-
-        const symbol =
-          symbolMap[stockName];
-
-        if (!symbol) continue;
-
-        const marketData =
-          await getStockData(
-            symbol
-          );
-
-        const qty =
-          stock["Qty"] || 0;
+app.get("/portfolio", async (req, res) => {
+  try {
+   
+    const totalInvestment = data.reduce(
+      (sum, stock) => {
+        const qty = stock["Qty"] || 0;
 
         const purchasePrice =
-          stock[
-            "Purchase Price"
-          ] || 0;
+          stock["Purchase Price"] || 0;
+
+        return sum + qty * purchasePrice;
+      },
+      0
+    );
+
+    const updatedData = await Promise.all(
+      data.map(async (stock) => {
+        const stockName = stock["Particulars"];
+
+        const symbol = symbolMap[stockName];
+
+        if (!symbol) return null;
+
+        const marketData = await getStockData(
+          symbol
+        );
+
+        const qty = stock["Qty"] || 0;
+
+        const purchasePrice =
+          stock["Purchase Price"] || 0;
 
         const investment =
           purchasePrice * qty;
@@ -203,15 +161,14 @@ app.get(
           marketData.cmp * qty;
 
         const gainLoss =
-          presentValue -
-          investment;
+          presentValue - investment;
 
         const portfolioPercent =
-          (investment /
-            totalInvestment) *
-          100;
+          (investment / totalInvestment) * 100;
 
-        updatedData.push({
+        return {
+        
+
           stockName,
 
           symbol,
@@ -226,23 +183,16 @@ app.get(
             investment.toFixed(2)
           ),
 
-          portfolioPercent:
-            Number(
-              portfolioPercent.toFixed(
-                2
-              )
-            ),
+          portfolioPercent: Number(
+            portfolioPercent.toFixed(2)
+          ),
 
           cmp: Number(
-            marketData.cmp.toFixed(
-              2
-            )
+            marketData.cmp.toFixed(2)
           ),
 
           presentValue: Number(
-            presentValue.toFixed(
-              2
-            )
+            presentValue.toFixed(2)
           ),
 
           gainLoss: Number(
@@ -250,34 +200,32 @@ app.get(
           ),
 
           peRatio: Number(
-            marketData.peRatio.toFixed(
-              2
-            )
+            marketData.peRatio.toFixed(2)
           ),
 
           latestEarnings:
             marketData.earnings,
-        });
-      }
+        };
+      })
+    );
 
-      res.json(updatedData);
-    } catch (error) {
-      console.log(error);
+    const filteredData =
+      updatedData.filter(Boolean);
 
-      res.status(500).json({
-        error:
-          "Something went wrong",
-      });
-    }
+    res.json(filteredData);
+  } catch (error) {
+    console.log(error);
+
+    res.status(500).json({
+      error: "Something went wrong",
+    });
   }
-);
+});
 
 app.get("/", (req, res) => {
   res.send("Portfolio API Running");
 });
 
 app.listen(PORT, () => {
-  console.log(
-    `Server running on port ${PORT}`
-  );
+  console.log(`Server running on port ${PORT}`);
 });
